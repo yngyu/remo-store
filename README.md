@@ -1,0 +1,8 @@
+# remo-store
+
+## environment vairables
+* NATURE_TOKEN
+* INFLUXDB_HOST
+* INFLUXDB_TOKEN
+* INFLUXDB_ORG
+* INFLUXDB_BUCKET
