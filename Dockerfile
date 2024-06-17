@@ -1,4 +1,4 @@
-FROM rust:1.77 as builder
+FROM rust:1.79 as builder
 
 ARG  WORKDIR="/usr/src/remo-store"
 
