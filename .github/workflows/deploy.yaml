@@ -45,6 +45,11 @@ jobs:
             password: '${{ steps.auth.outputs.access_token }}'
             registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
 
+        - name: Set up QEMU
+          uses: docker/setup-qemu-action@v3
+          with:
+            platforms: linux/amd64,linux/arm64
+
         - name: Set up Docker Buildx
           uses: docker/setup-buildx-action@v3
 
