@@ -1,10 +1,10 @@
 name: Deployment
 
 on:
-    push:
-        branches:
-            - master
-    workflow_dispatch:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
 
 env:
   PROJECT_ID: unique-machine-360813
@@ -13,9 +13,44 @@ env:
   IMAGE: remo-store
 
 jobs:
-  push-to-artifact-registry:
-    name: Push Docker image to Artifact Registry
+  delete-existing-images:
+    name: Delete existing Docker images
     runs-on: ubuntu-latest
+
+    # Add "id-token" with the intended permissions.
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+        - name: Check out
+          uses: actions/checkout@v4
+
+        - name: Google Auth
+          id: auth
+          uses: 'google-github-actions/auth@v2'
+          with:
+            token_format: 'access_token'
+            workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+            service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
+
+        - name: Set up Cloud SDK
+          uses: 'google-github-actions/setup-gcloud@v2'
+
+        - name: Delete existing docker image
+          run: gcloud artifacts docker images delete '${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.IMAGE }}' --delete-tags || (echo "Already deleted."; exit 0)
+
+  push-to-artifact-registry:
+    name: Push Docker image to Artifact Registry (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    needs: delete-existing-images
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
 
     # Add "id-token" with the intended permissions.
     permissions:
@@ -45,16 +80,8 @@ jobs:
             password: '${{ steps.auth.outputs.access_token }}'
             registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
 
-        - name: Set up QEMU
-          uses: docker/setup-qemu-action@v3
-          with:
-            platforms: linux/amd64,linux/arm64
-
         - name: Set up Docker Buildx
           uses: docker/setup-buildx-action@v3
-
-        - name: Delete unnecessary docker image
-          run: gcloud artifacts docker images delete '${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.IMAGE }}' --delete-tags || (echo "Some error ignored."; exit 0)
 
         - name: Build and push Docker image
           uses: docker/build-push-action@v6
@@ -62,6 +89,5 @@ jobs:
             context: .
             file: ./Dockerfile
             push: true
-            platforms: linux/amd64,linux/arm64
             tags: '${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.IMAGE }}:${{ github.sha }}'
 
