@@ -11,7 +11,7 @@ const PLACE_JA: &str = "リビング";
 const PLACE_TAG: &str = "Living";
 const SENSOR_TAG: &str = "Nature-Remo-mini-2";
 
-fn main() -> Result<(), Box<(dyn Error + 'static)>> {
+fn main() -> Result<(), Box<dyn Error + 'static>> {
     env_logger::init();
 
     let nature_token =
